@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MathKeyboard — Responsive Demo</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: #0F172A; color: #E2E8F0; min-height: 100vh; }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px; gap: 12px;
+    background: rgba(15,23,42,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid #1E293B;
+    flex-wrap: wrap;
+  }
+  .toolbar-title {
+    font-size: 16px; font-weight: 700; color: #F8FAFC;
+    white-space: nowrap;
+  }
+  .toolbar-title span { color: #818CF8; }
+  .device-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .device-btn {
+    padding: 6px 14px; border-radius: 8px; border: 1.5px solid #334155;
+    background: transparent; color: #94A3B8; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; font-family: inherit;
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .device-btn:hover { border-color: #6366F1; color: #C7D2FE; }
+  .device-btn.active {
+    background: #6366F1; border-color: #6366F1; color: #FFF;
+  }
+  .device-icon { font-size: 15px; }
+  .size-label {
+    font-size: 12px; color: #64748B; font-weight: 500;
+    margin-left: 8px; white-space: nowrap;
+  }
+
+  /* ── Device frame ── */
+  .frame-wrap {
+    display: flex; justify-content: center; align-items: flex-start;
+    padding: 32px 16px; min-height: calc(100vh - 60px);
+  }
+  .device-frame {
+    background: #1E293B; border-radius: 20px; overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 0 1px #334155;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1), height 0.4s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column;
+  }
+  .device-frame.phone { width: 375px; min-height: 667px; }
+  .device-frame.tablet { width: 768px; min-height: 600px; }
+  .device-frame.desktop { width: 1024px; min-height: 500px; }
+  .device-frame.full { width: 100%; min-height: 500px; border-radius: 0; }
+
+  /* ── Device header bar (decorative) ── */
+  .device-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; background: #0F172A; border-bottom: 1px solid #334155;
+    font-size: 11px; color: #64748B;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .dot.r { background: #EF4444; }
+  .dot.y { background: #F59E0B; }
+  .dot.g { background: #22C55E; }
+
+  /* ── Inner content ── */
+  .device-content {
+    flex: 1; background: #F8FAFC; overflow-y: auto;
+  }
+
+  /* ── Responsive note badge ── */
+  .responsive-badge {
+    position: fixed; bottom: 16px; right: 16px; z-index: 200;
+    padding: 8px 14px; border-radius: 10px;
+    background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
+    color: #A5B4FC; font-size: 12px; font-weight: 600;
+    backdrop-filter: blur(8px);
+  }
+
+  @media (max-width: 480px) {
+    .toolbar { padding: 8px 12px; }
+    .toolbar-title { font-size: 14px; }
+    .device-btn { padding: 5px 10px; font-size: 12px; }
+    .frame-wrap { padding: 12px 4px; }
+    .device-frame.phone,
+    .device-frame.tablet,
+    .device-frame.desktop { width: 100%; border-radius: 12px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-type="module">
+/* ═══════════════════════════════════════════════
+   CORE:  buttons.js  (inline)
+   ═══════════════════════════════════════════════ */
+const COLORS = {
+  NUM:        { bg: "#FFFFFF", fg: "#1E293B" },
+  FUNC:       { bg: "#F1F5F9", fg: "#475569" },
+  FRAC:       { bg: "#FEF9C3", fg: "#A16207" },
+  TOOL:       { bg: "#CBD5E1", fg: "#334155" },
+  ARITH:      { bg: "#6366F1", fg: "#FFFFFF" },
+  ACCENT:     "#6366F1",
+  ACCENT_LIGHT: "#EEF2FF",
+  KB_BG:      "#E2E8F0",
+  DRAG_HIGHLIGHT: "rgba(99,102,241,0.2)",
+  DRAG_RING:  "#6366F1",
+};
+const COLS = 7, ROWS = 5, GAP = 4, KB_HEIGHT = 280, BORDER_RADIUS = 8;
+
+const createDefaultButtons = () => {
+  const { NUM: N, FUNC: F, FRAC: FR, TOOL: T, ARITH: A } = COLORS;
+  return [
+    { id:"sq", label:"\u221A",  ...F,  fs:20, act:"sqrt" },
+    { id:"p1", label:"(",       ...F,  fs:18, act:"op", val:"(" },
+    { id:"p2", label:")",       ...F,  fs:18, act:"op", val:")" },
+    { id:"AC", label:"AC",      ...T,  fs:14, act:"clear" },
+    { id:"BK", label:"\u232B",  ...T,  fs:17, act:"back" },
+    { id:"NL", label:"\u21B5",  ...T,  fs:16, act:"enter" },
+    { id:"dv", label:"\u00F7",  ...A,  fs:22, act:"op", val:"\u00F7" },
+
+    { id:"pi", label:"\u03C0",  ...F,  fs:19, act:"op", val:"\u03C0" },
+    { id:"LT", label:"<",       ...F,  fs:18, act:"op", val:"<" },
+    { id:"GT", label:">",       ...F,  fs:18, act:"op", val:">" },
+    { id:"N7", label:"7",       ...N,  fs:22, act:"num", val:"7" },
+    { id:"N8", label:"8",       ...N,  fs:22, act:"num", val:"8" },
+    { id:"N9", label:"9",       ...N,  fs:22, act:"num", val:"9" },
+    { id:"mu", label:"\u00D7",  ...A,  fs:22, act:"op", val:"\u00D7" },
+
+    { id:"H1", label:"\u00BD",  ...FR, fs:17, act:"frac", n:"1", d:"2" },
+    { id:"H2", label:"\u00BC",  ...FR, fs:17, act:"frac", n:"1", d:"4" },
+    { id:"H3", label:"\u00BE",  ...FR, fs:17, act:"frac", n:"3", d:"4" },
+    { id:"N4", label:"4",       ...N,  fs:22, act:"num", val:"4" },
+    { id:"N5", label:"5",       ...N,  fs:22, act:"num", val:"5" },
+    { id:"N6", label:"6",       ...N,  fs:22, act:"num", val:"6" },
+    { id:"MI", label:"\u2212",  ...A,  fs:24, act:"op", val:"\u2212" },
+
+    { id:"FR", label:"a/b",     ...FR, fs:12, act:"startFr", isFrac:true },
+    { id:"MX", label:"n\u00B7", ...FR, fs:12, act:"startMx", isMx:true },
+    { id:"H4", label:"\u2153",  ...FR, fs:17, act:"frac", n:"1", d:"3" },
+    { id:"N1", label:"1",       ...N,  fs:22, act:"num", val:"1" },
+    { id:"N2", label:"2",       ...N,  fs:22, act:"num", val:"2" },
+    { id:"N3", label:"3",       ...N,  fs:22, act:"num", val:"3" },
+    { id:"PL", label:"+",       ...A,  fs:24, act:"op", val:"+" },
+
+    { id:"ab", label:"abc",     ...T,  fs:13, act:"abc" },
+    { id:"en", label:"x\u207F", ...F,  fs:15, act:"expn" },
+    { id:"s2", label:"x\u00B2", ...F,  fs:15, act:"exp2" },
+    { id:"PC", label:"%",       ...N,  fs:17, act:"op", val:"%" },
+    { id:"N0", label:"0",       ...N,  fs:22, act:"num", val:"0" },
+    { id:"DT", label:".",       ...N,  fs:22, act:"op", val:"." },
+    { id:"EQ", label:"=",       ...F,  fs:20, act:"op", val:"=" },
+  ];
+};
+
+/* ═══════════════════════════════════════════════
+   CORE:  useExpression.js  (inline)
+   ═══════════════════════════════════════════════ */
+const { useState, useCallback, useRef, useEffect, useMemo } = React;
+
+function useMathExpression() {
+  const [expr, setExpr] = useState([]);
+  const [abcTxt, setAbcTxt] = useState("");
+  const [mode, setMode] = useState("math");
+  const [fStep, setFStep] = useState(null);
+  const [fBuf, setFBuf] = useState({ n: "", d: "" });
+  const [mxW, setMxW] = useState("");
+  const [mxOn, setMxOn] = useState(false);
+  const [exOn, setExOn] = useState(false);
+  const [exB, setExB] = useState("");
+  const [exP, setExP] = useState("");
+
+  const building = fStep || mxOn || exOn;
+
+  const push = useCallback((item) => setExpr((p) => [...p, item]), []);
+
+  const num = useCallback((n) => {
+    if (fStep === "num") return setFBuf((p) => ({ ...p, n: p.n + n }));
+    if (fStep === "den") return setFBuf((p) => ({ ...p, d: p.d + n }));
+    if (mxOn) return setMxW((p) => p + n);
+    if (exOn && !exB) return setExB(n);
+    if (exOn) return setExP((p) => p + n);
+    setExpr((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.type === "n") return [...prev.slice(0, -1), { type: "n", v: last.v + n }];
+      return [...prev, { type: "n", v: n }];
+    });
+  }, [fStep, mxOn, exOn, exB]);
+
+  const op = useCallback((o) => { if (!building) push({ type: "o", v: o }); }, [building, push]);
+
+  const startFr = useCallback(() => {
+    setFStep("num"); setFBuf({ n: "", d: "" }); setMxW(""); setMxOn(false);
+  }, []);
+  const startMx = useCallback(() => {
+    setMxOn(true); setMxW(""); setFBuf({ n: "", d: "" }); setFStep(null);
+  }, []);
+  const fracNext = useCallback(() => {
+    if (mxOn && mxW) { setMxOn(false); setFStep("num"); return; }
+    if (fStep === "num" && fBuf.n) { setFStep("den"); return; }
+    if (fStep === "den" && fBuf.d && fBuf.d !== "0") {
+      const token = mxW
+        ? { type: "mx", w: mxW, n: fBuf.n, d: fBuf.d }
+        : { type: "fr", n: fBuf.n, d: fBuf.d };
+      push(token);
+      setFStep(null); setFBuf({ n: "", d: "" }); setMxW("");
+    }
+  }, [mxOn, mxW, fStep, fBuf, push]);
+
+  const startEx = useCallback(() => {
+    setExpr((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.type === "n") { setExB(last.v); return prev.slice(0, -1); }
+      setExB(""); return prev;
+    });
+    setExOn(true); setExP("");
+  }, []);
+  const quickExp2 = useCallback(() => {
+    setExpr((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.type === "n") return [...prev.slice(0, -1), { type: "ex", b: last.v, p: "2" }];
+      return prev;
+    });
+  }, []);
+  const confirmEx = useCallback(() => {
+    if (exB && exP) { push({ type: "ex", b: exB, p: exP }); setExOn(false); setExB(""); setExP(""); }
+  }, [exB, exP, push]);
+
+  const cancelBuild = useCallback(() => {
+    setFStep(null); setMxW(""); setMxOn(false); setExOn(false); setExB(""); setExP("");
+  }, []);
+
+  const back = useCallback(() => {
+    if (mode === "abc") { setAbcTxt((p) => p.slice(0, -1)); return; }
+    if (fStep === "den" && fBuf.d) { setFBuf((p) => ({ ...p, d: p.d.slice(0, -1) })); return; }
+    if (fStep === "den") { setFStep("num"); return; }
+    if (fStep === "num" && fBuf.n) { setFBuf((p) => ({ ...p, n: p.n.slice(0, -1) })); return; }
+    if (fStep === "num") { if (mxW) { setMxOn(true); setFStep(null); } else setFStep(null); return; }
+    if (mxOn && mxW) { setMxW((p) => p.slice(0, -1)); return; }
+    if (mxOn) { setMxOn(false); return; }
+    if (exOn && exP) { setExP((p) => p.slice(0, -1)); return; }
+    if (exOn && exB) { setExB(""); return; }
+    if (exOn) { setExOn(false); return; }
+    setExpr((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.type === "n" && last.v.length > 1)
+        return [...prev.slice(0, -1), { type: "n", v: last.v.slice(0, -1) }];
+      return prev.slice(0, -1);
+    });
+  }, [mode, fStep, fBuf, mxOn, mxW, exOn, exB, exP]);
+
+  const clear = useCallback(() => { setExpr([]); setAbcTxt(""); cancelBuild(); }, [cancelBuild]);
+
+  const commitLine = useCallback(() => {
+    const tokens = [];
+    if (abcTxt) tokens.push({ type: "txt", v: abcTxt });
+    tokens.push(...expr);
+    if (tokens.length === 0) return null;
+    setExpr([]); setAbcTxt(""); cancelBuild();
+    return tokens;
+  }, [abcTxt, expr, cancelBuild]);
+
+  const executeAction = useCallback((btn) => {
+    if (!btn) return;
+    switch (btn.act) {
+      case "num":     num(btn.val); break;
+      case "op":      op(btn.val); break;
+      case "sqrt":    push({ type: "o", v: "\u221A(" }); break;
+      case "exp2":    quickExp2(); break;
+      case "expn":    startEx(); break;
+      case "back":    back(); break;
+      case "enter":   return "commit";
+      case "clear":   clear(); break;
+      case "frac":    push({ type: "fr", n: btn.n, d: btn.d }); break;
+      case "startFr": startFr(); break;
+      case "startMx": startMx(); break;
+      case "abc":     setMode("abc"); break;
+      default: break;
+    }
+    return null;
+  }, [num, op, push, quickExp2, startEx, back, clear, startFr, startMx]);
+
+  return {
+    expr, abcTxt, mode, building,
+    fStep, fBuf, mxW, mxOn, exOn, exB, exP,
+    num, op, push, back, clear,
+    startFr, startMx, fracNext,
+    startEx, quickExp2, confirmEx,
+    cancelBuild, commitLine, executeAction,
+    setMode, setAbcTxt,
+  };
+}
+
+/* ═══════════════════════════════════════════════
+   CORE:  useDragReorder.js  (inline)
+   ═══════════════════════════════════════════════ */
+function useDragReorder(buttons, setButtons) {
+  const [editMode, setEditMode] = useState(false);
+  const [dragIdx, setDragIdx] = useState(null);
+  const [hoverIdx, setHoverIdx] = useState(null);
+  const [ghostPos, setGhostPos] = useState(null);
+
+  const getCellFromPoint = useCallback((x, y, gridRect) => {
+    if (!gridRect) return -1;
+    const cellW = (gridRect.width - GAP * (COLS - 1)) / COLS;
+    const cellH = (gridRect.height - GAP * (ROWS - 1)) / ROWS;
+    const col = Math.floor((x - gridRect.left) / (cellW + GAP));
+    const row = Math.floor((y - gridRect.top) / (cellH + GAP));
+    if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return -1;
+    return row * COLS + col;
+  }, []);
+
+  const startDrag = useCallback((idx, x, y) => {
+    if (!editMode) return;
+    setDragIdx(idx); setGhostPos({ x, y }); setHoverIdx(idx);
+  }, [editMode]);
+
+  const moveDrag = useCallback((x, y, gridRect) => {
+    if (dragIdx === null) return;
+    setGhostPos({ x, y });
+    const target = getCellFromPoint(x, y, gridRect);
+    if (target >= 0 && target < buttons.length) setHoverIdx(target);
+  }, [dragIdx, getCellFromPoint, buttons.length]);
+
+  const endDrag = useCallback(() => {
+    if (dragIdx !== null && hoverIdx !== null && dragIdx !== hoverIdx) {
+      setButtons((prev) => {
+        const next = [...prev];
+        const temp = next[dragIdx]; next[dragIdx] = next[hoverIdx]; next[hoverIdx] = temp;
+        return next;
+      });
+    }
+    setDragIdx(null); setHoverIdx(null); setGhostPos(null);
+  }, [dragIdx, hoverIdx, setButtons]);
+
+  const toggleEdit = useCallback(() => {
+    setEditMode((p) => !p); setDragIdx(null); setHoverIdx(null); setGhostPos(null);
+  }, []);
+
+  return { editMode, dragIdx, hoverIdx, ghostPos, toggleEdit, startDrag, moveDrag, endDrag };
+}
+
+/* ═══════════════════════════════════════════════
+   UI:  Fraction inline component
+   ═══════════════════════════════════════════════ */
+function Fraction({ top, bottom, size = 12, topColor = "#1E293B", bottomColor = "#1E293B", lineColor }) {
+  return (
+    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", lineHeight: 1.1 }}>
+      <span style={{ fontSize: size, fontWeight: 600, color: topColor }}>{top}</span>
+      <span style={{ width: "110%", height: 1.2, background: lineColor || topColor, margin: "1px 0" }} />
+      <span style={{ fontSize: size, fontWeight: 600, color: bottomColor }}>{bottom}</span>
+    </span>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   UI:  Builder bars
+   ═══════════════════════════════════════════════ */
+function FractionBuilder({ mxOn, mxW, fStep, fBuf, onNext, onCancel }) {
+  const barStyle = {
+    display: "flex", alignItems: "center", gap: 8,
+    padding: "6px 12px", marginBottom: 4, borderRadius: 8,
+    background: COLORS.FRAC.bg, border: `1.5px solid ${COLORS.FRAC.fg}`,
+    fontSize: 14, fontWeight: 600, color: COLORS.FRAC.fg,
+    flexWrap: "wrap",
+  };
+  const fieldStyle = (active) => ({
+    padding: "2px 8px", borderRadius: 4, minWidth: 30, textAlign: "center",
+    background: active ? "#FFF" : "#FEF3C7",
+    border: active ? `2px solid ${COLORS.ACCENT}` : "1px solid #D97706",
+    animation: active ? "mathkb-blink 1s step-end infinite" : "none",
+  });
+
+  let label, fields;
+  if (mxOn) {
+    label = "Tam kisim:";
+    fields = <span style={fieldStyle(true)}>{mxW || "_"}</span>;
+  } else if (fStep === "num") {
+    label = "Pay:";
+    fields = <span style={fieldStyle(true)}>{fBuf.n || "_"}</span>;
+  } else {
+    label = "";
+    fields = (
+      <>
+        <span style={fieldStyle(false)}>{fBuf.n}</span>
+        <span>/</span>
+        <span style={fieldStyle(true)}>{fBuf.d || "_"}</span>
+      </>
+    );
+  }
+
+  return (
+    <div style={barStyle}>
+      <span>{label}</span>
+      {fields}
+      <button onClick={onNext} style={{
+        marginLeft: "auto", padding: "3px 12px", borderRadius: 6,
+        background: COLORS.ACCENT, color: "#FFF", border: "none",
+        fontWeight: 700, fontSize: 12, cursor: "pointer",
+      }}>{fStep === "den" ? "Ekle" : "Sonraki"}</button>
+      <button onClick={onCancel} style={{
+        padding: "3px 8px", borderRadius: 6,
+        background: "#EF4444", color: "#FFF", border: "none",
+        fontWeight: 700, fontSize: 12, cursor: "pointer",
+      }}>&times;</button>
+    </div>
+  );
+}
+
+function ExponentBuilder({ exB, exP, onConfirm, onCancel }) {
+  const barStyle = {
+    display: "flex", alignItems: "center", gap: 8,
+    padding: "6px 12px", marginBottom: 4, borderRadius: 8,
+    background: "#EEF2FF", border: `1.5px solid ${COLORS.ACCENT}`,
+    fontSize: 14, fontWeight: 600, color: COLORS.ACCENT,
+    flexWrap: "wrap",
+  };
+  const fieldStyle = (active) => ({
+    padding: "2px 8px", borderRadius: 4, minWidth: 30, textAlign: "center",
+    background: active ? "#FFF" : "#E0E7FF",
+    border: active ? `2px solid ${COLORS.ACCENT}` : "1px solid #818CF8",
+    animation: active ? "mathkb-blink 1s step-end infinite" : "none",
+  });
+  return (
+    <div style={barStyle}>
+      <span>Us:</span>
+      <span style={fieldStyle(!exB)}>{exB || "_"}</span>
+      <sup style={fieldStyle(!!exB)}>{exP || "_"}</sup>
+      <button onClick={onConfirm} style={{
+        marginLeft: "auto", padding: "3px 12px", borderRadius: 6,
+        background: COLORS.ACCENT, color: "#FFF", border: "none",
+        fontWeight: 700, fontSize: 12, cursor: "pointer",
+      }}>Ekle</button>
+      <button onClick={onCancel} style={{
+        padding: "3px 8px", borderRadius: 6,
+        background: "#EF4444", color: "#FFF", border: "none",
+        fontWeight: 700, fontSize: 12, cursor: "pointer",
+      }}>&times;</button>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   UI:  Expression renderer
+   ═══════════════════════════════════════════════ */
+function ExpressionToken({ token }) {
+  const base = { display: "inline-flex", alignItems: "center", margin: "0 2px", fontWeight: 600 };
+  switch (token.type) {
+    case "n": return <span style={{ ...base, color: "#1E293B" }}>{token.v}</span>;
+    case "o": return <span style={{ ...base, color: "#6366F1" }}>{token.v}</span>;
+    case "fr":
+      return <Fraction top={token.n} bottom={token.d} size={11} topColor="#A16207" bottomColor="#A16207" />;
+    case "mx":
+      return (
+        <span style={{ ...base }}>
+          <span style={{ color: "#1E293B", marginRight: 2 }}>{token.w}</span>
+          <Fraction top={token.n} bottom={token.d} size={9} topColor="#A16207" bottomColor="#A16207" />
+        </span>
+      );
+    case "ex":
+      return (
+        <span style={{ ...base, color: "#1E293B" }}>
+          {token.b}<sup style={{ fontSize: "0.7em", color: "#6366F1" }}>{token.p}</sup>
+        </span>
+      );
+    case "txt": return <span style={{ ...base, color: "#475569", fontStyle: "italic" }}>{token.v}</span>;
+    default: return null;
+  }
+}
+
+function ExpressionLine({ tokens, fontSize = 18 }) {
+  if (!tokens || tokens.length === 0) return null;
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", flexWrap: "wrap", gap: 2,
+      padding: "6px 10px", fontSize, minHeight: 32,
+    }}>
+      {tokens.map((t, i) => <ExpressionToken key={i} token={t} />)}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN:  MathKeyboard (responsive)
+   ═══════════════════════════════════════════════ */
+const CSS_ANIMATIONS = `
+@keyframes mathkb-blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes mathkb-jiggle{0%{transform:rotate(-1.5deg)}100%{transform:rotate(1.5deg)}}
+`;
+
+function MathKeyboard({ onCommit, height, style, containerWidth }) {
+  const [buttons, setButtons] = useState(createDefaultButtons);
+  const gridRef = useRef(null);
+  const engine = useMathExpression();
+  const drag = useDragReorder(buttons, setButtons);
+
+  /* ── Responsive height/font scaling ── */
+  const w = containerWidth || 375;
+  const responsiveHeight = height || (w < 360 ? 220 : w < 500 ? 260 : w < 768 ? 280 : 300);
+  const fontScale = w < 320 ? 0.7 : w < 400 ? 0.85 : w < 600 ? 1 : 1.1;
+
+  const handleAction = useCallback((btn) => {
+    if (drag.editMode) return;
+    const result = engine.executeAction(btn);
+    if (result === "commit" && onCommit) {
+      const tokens = engine.commitLine();
+      if (tokens) onCommit(tokens);
+    }
+  }, [drag.editMode, engine, onCommit]);
+
+  const onPointerDown = useCallback((e, idx) => {
+    if (!drag.editMode) return;
+    e.preventDefault();
+    const pt = e.touches ? e.touches[0] : e;
+    drag.startDrag(idx, pt.clientX, pt.clientY);
+  }, [drag]);
+
+  const onPointerMove = useCallback((e) => {
+    if (drag.dragIdx === null) return;
+    e.preventDefault();
+    const pt = e.touches ? e.touches[0] : e;
+    const rect = gridRef.current?.getBoundingClientRect();
+    drag.moveDrag(pt.clientX, pt.clientY, rect);
+  }, [drag]);
+
+  const onPointerUp = useCallback(() => { drag.endDrag(); }, [drag]);
+
+  const renderLabel = (btn) => {
+    if (btn.isFrac) return <Fraction top="a" bottom="b" size={Math.round(9 * fontScale)} topColor={btn.fg} bottomColor={btn.fg} />;
+    if (btn.isMx) return (
+      <span style={{ display: "flex", alignItems: "center", gap: 1 }}>
+        n<Fraction top="a" bottom="b" size={Math.round(7 * fontScale)} topColor={btn.fg} bottomColor={btn.fg} />
+      </span>
+    );
+    return btn.label;
+  };
+
+  return (
+    <div
+      style={{ position: "relative", ...style }}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onTouchMove={onPointerMove}
+      onTouchEnd={onPointerUp}
+    >
+      <style>{CSS_ANIMATIONS}</style>
+
+      {/* Builder bars */}
+      {(engine.mxOn || engine.fStep) && (
+        <FractionBuilder
+          mxOn={engine.mxOn} mxW={engine.mxW}
+          fStep={engine.fStep} fBuf={engine.fBuf}
+          onNext={engine.fracNext} onCancel={engine.cancelBuild}
+        />
+      )}
+      {engine.exOn && (
+        <ExponentBuilder
+          exB={engine.exB} exP={engine.exP}
+          onConfirm={engine.confirmEx} onCancel={engine.cancelBuild}
+        />
+      )}
+
+      {/* Edit toggle */}
+      <button onClick={drag.toggleEdit} style={{
+        position: "absolute", top: -28, right: 10, zIndex: 10,
+        padding: "3px 10px", borderRadius: 6, border: "none",
+        background: drag.editMode ? "#EF4444" : COLORS.ACCENT, color: "#FFF",
+        fontSize: Math.round(11 * fontScale), fontWeight: 700, cursor: "pointer",
+        fontFamily: "inherit", boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+      }}>
+        {drag.editMode ? "\u2713 Bitti" : "\u2699 D\u00FCzenle"}
+      </button>
+
+      {/* Keyboard grid */}
+      {engine.mode === "math" ? (
+        <div ref={gridRef} style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+          gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+          gap: GAP, height: responsiveHeight, background: COLORS.KB_BG,
+          padding: w < 360 ? "4px 4px 3px" : "6px 8px 5px",
+          touchAction: "none", boxSizing: "border-box",
+          borderRadius: "0 0 12px 12px",
+        }}>
+          {buttons.map((btn, idx) => {
+            const isDragging = drag.dragIdx === idx;
+            const isTarget = drag.hoverIdx === idx && drag.dragIdx !== null && drag.dragIdx !== idx;
+            return (
+              <div key={idx}
+                onPointerDown={(e) => drag.editMode ? onPointerDown(e, idx) : null}
+                onTouchStart={(e) => drag.editMode ? onPointerDown(e, idx) : null}
+                onClick={() => handleAction(btn)}
+                style={{
+                  borderRadius: BORDER_RADIUS,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: "none", cursor: drag.editMode ? "grab" : "pointer",
+                  fontFamily: "inherit", fontWeight: 600,
+                  fontSize: Math.round((btn.fs || 18) * fontScale),
+                  color: btn.fg,
+                  background: isDragging ? COLORS.DRAG_HIGHLIGHT : btn.bg,
+                  boxShadow: isTarget
+                    ? `0 0 0 3px ${COLORS.DRAG_RING}, 0 2px 8px rgba(99,102,241,0.3)`
+                    : "0 1px 2px rgba(0,0,0,0.06)",
+                  opacity: isDragging ? 0.35 : 1,
+                  transform: isTarget ? "scale(1.06)" : "none",
+                  transition: "transform 0.15s, box-shadow 0.15s, opacity 0.1s",
+                  animation: drag.editMode ? "mathkb-jiggle 0.3s infinite alternate" : "none",
+                  WebkitTapHighlightColor: "transparent",
+                  userSelect: "none",
+                }}
+              >
+                {renderLabel(btn)}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* ABC keyboard */
+        <div style={{
+          display: "flex", flexDirection: "column", gap: GAP,
+          height: responsiveHeight, padding: w < 360 ? "4px 4px 3px" : "6px 8px 5px",
+          background: COLORS.KB_BG,
+          justifyContent: "center", boxSizing: "border-box",
+          borderRadius: "0 0 12px 12px",
+        }}>
+          {["qwertyuiop", "asdfghjkl", "zxcvbnm"].map((row, ri) => (
+            <div key={ri} style={{ display: "flex", gap: 3, justifyContent: "center", flex: 1 }}>
+              {row.split("").map((ch) => (
+                <button key={ch} onClick={() => engine.setAbcTxt((p) => p + ch)} style={{
+                  flex: 1, maxWidth: w < 400 ? 32 : 42,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: BORDER_RADIUS, border: "none", cursor: "pointer",
+                  fontFamily: "inherit", fontWeight: 400,
+                  fontSize: Math.round(17 * fontScale),
+                  color: "#1E293B", background: "#FFF",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                }}>{ch}</button>
+              ))}
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: GAP, flex: 1 }}>
+            {[
+              { l: "123", a: () => engine.setMode("math"), w: w < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 14, fw: 700 },
+              { l: "space", a: () => engine.setAbcTxt((p) => p + " "), flex: 1, bg: "#FFF", fs: 14 },
+              { l: "=", a: () => engine.setAbcTxt((p) => p + "="), w: w < 400 ? 32 : 42, bg: COLORS.TOOL.bg, fs: 17 },
+              { l: "\u232B", a: engine.back, w: w < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 18 },
+            ].map((k, i) => (
+              <button key={i} onClick={k.a} style={{
+                width: k.w, flex: k.flex,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: BORDER_RADIUS, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontWeight: k.fw || 500,
+                fontSize: Math.round((k.fs || 17) * fontScale),
+                color: "#334155", background: k.bg,
+                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+              }}>{k.l}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Drag ghost */}
+      {drag.dragIdx !== null && drag.ghostPos && buttons[drag.dragIdx] && (
+        <div style={{
+          position: "fixed",
+          left: drag.ghostPos.x - 30, top: drag.ghostPos.y - 24,
+          width: 60, height: 48, borderRadius: BORDER_RADIUS,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: buttons[drag.dragIdx].bg, color: buttons[drag.dragIdx].fg,
+          fontSize: Math.round(buttons[drag.dragIdx].fs * fontScale),
+          fontWeight: 600, fontFamily: "inherit",
+          boxShadow: `0 8px 24px rgba(0,0,0,0.2), 0 0 0 2px ${COLORS.DRAG_RING}`,
+          pointerEvents: "none", zIndex: 999,
+          transform: "scale(1.1)", opacity: 0.95,
+        }}>
+          {renderLabel(buttons[drag.dragIdx])}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   DEMO APP
+   ═══════════════════════════════════════════════ */
+const DEVICES = [
+  { id: "phone",   label: "Telefon",  icon: "\uD83D\uDCF1", w: 375,  desc: "375 x 667" },
+  { id: "tablet",  label: "Tablet",   icon: "\uD83D\uDCBB", w: 768,  desc: "768 x 600" },
+  { id: "desktop", label: "Masaustu", icon: "\uD83D\uDDA5\uFE0F",  w: 1024, desc: "1024 x 500" },
+  { id: "full",    label: "Tam",      icon: "\u2922",  w: null, desc: "Tam genislik" },
+];
+
+function DemoApp() {
+  const [device, setDevice] = useState("phone");
+  const [lines, setLines] = useState([]);
+  const [containerW, setContainerW] = useState(375);
+  const contentRef = useRef(null);
+
+  const currentDevice = DEVICES.find((d) => d.id === device);
+
+  // Measure actual content width
+  useEffect(() => {
+    if (!contentRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerW(Math.round(entry.contentRect.width));
+      }
+    });
+    ro.observe(contentRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  const handleCommit = useCallback((tokens) => {
+    setLines((prev) => [...prev, tokens]);
+  }, []);
+
+  const clearLines = useCallback(() => setLines([]), []);
+
+  return (
+    <>
+      {/* Toolbar */}
+      <div className="toolbar">
+        <div className="toolbar-title">
+          <span>MathKeyboard</span> Responsive Demo
+        </div>
+        <div className="device-btns">
+          {DEVICES.map((d) => (
+            <button
+              key={d.id}
+              className={`device-btn ${device === d.id ? "active" : ""}`}
+              onClick={() => setDevice(d.id)}
+            >
+              <span className="device-icon">{d.icon}</span>
+              {d.label}
+            </button>
+          ))}
+        </div>
+        <span className="size-label">
+          {containerW}px genislik
+        </span>
+      </div>
+
+      {/* Device Frame */}
+      <div className="frame-wrap">
+        <div className={`device-frame ${device}`}>
+          {/* Decorative header */}
+          <div className="device-header">
+            <span className="dot r" />
+            <span className="dot y" />
+            <span className="dot g" />
+            <span style={{ marginLeft: 8 }}>
+              {currentDevice.icon} {currentDevice.label} &mdash; {currentDevice.desc}
+            </span>
+          </div>
+
+          {/* App content */}
+          <div className="device-content" ref={contentRef}>
+            {/* App header */}
+            <div style={{
+              padding: "16px 16px 12px",
+              background: "#FFF",
+              borderBottom: "1px solid #E2E8F0",
+            }}>
+              <div style={{
+                fontSize: containerW < 400 ? 16 : 20,
+                fontWeight: 700, color: "#1E293B",
+              }}>
+                Matematik Klavyesi
+              </div>
+              <div style={{
+                fontSize: containerW < 400 ? 11 : 13,
+                color: "#64748B", marginTop: 4,
+              }}>
+                Kesir, us ve surukleme destekli matematik klavyesi
+              </div>
+            </div>
+
+            {/* Expression display area */}
+            <div style={{
+              padding: "8px 12px",
+              minHeight: 80,
+              background: "#FFF",
+              borderBottom: "1px solid #E2E8F0",
+            }}>
+              {lines.length === 0 ? (
+                <div style={{
+                  color: "#94A3B8", fontSize: 13, fontStyle: "italic",
+                  padding: "12px 0", textAlign: "center",
+                }}>
+                  Butonlara basarak ifade olusturun, sonra Enter'a basin...
+                </div>
+              ) : (
+                <>
+                  <div style={{
+                    display: "flex", justifyContent: "space-between",
+                    alignItems: "center", marginBottom: 4,
+                  }}>
+                    <span style={{ fontSize: 11, color: "#94A3B8", fontWeight: 600 }}>
+                      SONUCLAR ({lines.length})
+                    </span>
+                    <button onClick={clearLines} style={{
+                      padding: "2px 8px", borderRadius: 4, border: "1px solid #E2E8F0",
+                      background: "#FFF", color: "#64748B", fontSize: 11,
+                      cursor: "pointer", fontFamily: "inherit",
+                    }}>Temizle</button>
+                  </div>
+                  {lines.map((tokens, i) => (
+                    <div key={i} style={{
+                      background: i % 2 === 0 ? "#F8FAFC" : "#FFF",
+                      borderRadius: 6, marginBottom: 2,
+                      border: "1px solid #F1F5F9",
+                    }}>
+                      <ExpressionLine tokens={tokens} fontSize={containerW < 400 ? 15 : 18} />
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+
+            {/* Keyboard */}
+            <div style={{
+              padding: "32px 8px 12px",
+              background: "#F1F5F9",
+            }}>
+              <MathKeyboard
+                onCommit={handleCommit}
+                containerWidth={containerW}
+              />
+            </div>
+
+            {/* Feature info cards */}
+            <div style={{
+              padding: "16px 12px",
+              display: "grid",
+              gridTemplateColumns: containerW < 500 ? "1fr" : "1fr 1fr",
+              gap: 8,
+            }}>
+              {[
+                { title: "Kesir Olusturucu", desc: "a/b butonuna basarak adim adim kesir girin", color: "#FEF9C3", border: "#F59E0B" },
+                { title: "Us Olusturucu", desc: "xn butonuna basarak us ifadesi girin", color: "#EEF2FF", border: "#818CF8" },
+                { title: "Surukleme Modu", desc: "Duzenle butonuna basip tuslari suruklein", color: "#F0FDF4", border: "#22C55E" },
+                { title: "ABC Klavyesi", desc: "abc butonuyla metin moduna gecin", color: "#FFF1F2", border: "#FB7185" },
+              ].map((card, i) => (
+                <div key={i} style={{
+                  padding: "10px 12px", borderRadius: 8,
+                  background: card.color,
+                  border: `1px solid ${card.border}`,
+                  fontSize: containerW < 400 ? 11 : 13,
+                }}>
+                  <div style={{ fontWeight: 700, color: "#1E293B", marginBottom: 2, fontSize: containerW < 400 ? 12 : 14 }}>
+                    {card.title}
+                  </div>
+                  <div style={{ color: "#475569" }}>{card.desc}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Responsive info panel */}
+            <div style={{
+              margin: "0 12px 16px",
+              padding: "12px 14px", borderRadius: 10,
+              background: "#1E293B", color: "#E2E8F0",
+              fontSize: 12,
+            }}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: "#818CF8" }}>
+                Responsive Bilgileri
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px" }}>
+                <span style={{ color: "#94A3B8" }}>Container:</span>
+                <span style={{ fontWeight: 600 }}>{containerW}px</span>
+                <span style={{ color: "#94A3B8" }}>Klavye yuksekligi:</span>
+                <span style={{ fontWeight: 600 }}>
+                  {containerW < 360 ? 220 : containerW < 500 ? 260 : containerW < 768 ? 280 : 300}px
+                </span>
+                <span style={{ color: "#94A3B8" }}>Font olcegi:</span>
+                <span style={{ fontWeight: 600 }}>
+                  {containerW < 320 ? "0.7x" : containerW < 400 ? "0.85x" : containerW < 600 ? "1x" : "1.1x"}
+                </span>
+                <span style={{ color: "#94A3B8" }}>Grid:</span>
+                <span style={{ fontWeight: 600 }}>{COLS}x{ROWS} (35 buton)</span>
+                <span style={{ color: "#94A3B8" }}>Cihaz:</span>
+                <span style={{ fontWeight: 600 }}>{currentDevice.label} ({currentDevice.desc})</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Responsive badge */}
+      <div className="responsive-badge">
+        {containerW}px
+      </div>
+    </>
+  );
+}
+
+/* ── Mount ── */
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<DemoApp />);
+</script>
+</body>
+</html>
