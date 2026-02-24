@@ -3,7 +3,6 @@
 Draggable math keyboard for education apps — **React** & **React Native**
 
 ![7×5 Grid Layout](https://img.shields.io/badge/layout-7%C3%975_grid-6366F1)
-![Drag & Drop](https://img.shields.io/badge/feature-drag_%26_drop-F59E0B)
 ![Fractions](https://img.shields.io/badge/feature-fractions-A16207)
 ![Responsive](https://img.shields.io/badge/feature-responsive-22C55E)
 
