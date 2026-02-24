@@ -1,6 +1,4 @@
-# @mathpad/keyboard
-
-Draggable math keyboard for education apps — **React** & **React Native**
+Math keyboard for education apps — **React** & **React Native**
 
 [**Live Demo**](https://sjajac.github.io/Math-keyboard/demo/index.html)
 
