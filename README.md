@@ -40,12 +40,6 @@ abc   xⁿ  x²  │  %    0    .   │  =
   123      space        =   ↵
 ```
 
-## Install
-
-```bash
-npm install @mathpad/keyboard
-```
-
 ## Usage — React (Web)
 
 ```jsx
