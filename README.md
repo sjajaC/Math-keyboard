@@ -10,7 +10,6 @@ Draggable math keyboard for education apps — **React** & **React Native**
 ## Features
 
 - 🔢 **7×5 customizable grid** — numbers, operators, fractions, exponents
-- 🎯 **Drag & drop** — rearrange buttons with edit mode
 - 📐 **Fraction builder** — step-by-step fraction & mixed number input
 - ⬆️ **Exponent builder** — base + power input with superscript display
 - 🔤 **ABC keyboard** — staggered layout (iOS/Android style) with unified token ordering
