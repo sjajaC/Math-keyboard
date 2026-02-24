@@ -248,7 +248,48 @@ function useMathExpression() {
     });
   }, [fStep, mxOn, exOn, exB]);
 
-  const op = useCallback((o) => { if (!building) push({ type: "o", v: o }); }, [building, push]);
+  /* ── Operators that act as brackets/prefix and can follow other operators ── */
+  const BRACKET_OPS = new Set(["(", ")", "\u221A("]);
+
+  const op = useCallback((o) => {
+    if (building) return;
+    setExpr((prev) => {
+      const last = prev[prev.length - 1];
+
+      /* Allow brackets and √( freely */
+      if (BRACKET_OPS.has(o)) return [...prev, { type: "o", v: o }];
+
+      /* Allow "." if last token is a number without a dot already */
+      if (o === ".") {
+        if (last?.type === "n" && !last.v.includes(".")) {
+          return [...prev.slice(0, -1), { type: "n", v: last.v + "." }];
+        }
+        if (!last || last.type === "o") {
+          return [...prev, { type: "n", v: "0." }];
+        }
+        return prev;
+      }
+
+      /* First token: only allow unary minus */
+      if (prev.length === 0) {
+        if (o === "\u2212") return [{ type: "o", v: "\u2212" }];
+        return prev;
+      }
+
+      /* After opening bracket: allow unary minus */
+      if (last?.type === "o" && last.v === "(") {
+        if (o === "\u2212") return [...prev, { type: "o", v: "\u2212" }];
+        return prev;
+      }
+
+      /* Prevent consecutive operators: replace previous operator */
+      if (last?.type === "o" && !BRACKET_OPS.has(last.v)) {
+        return [...prev.slice(0, -1), { type: "o", v: o }];
+      }
+
+      return [...prev, { type: "o", v: o }];
+    });
+  }, [building]);
 
   const startFr = useCallback(() => {
     setFStep("num"); setFBuf({ n: "", d: "" }); setMxW(""); setMxOn(false);
@@ -321,6 +362,22 @@ function useMathExpression() {
     return tokens;
   }, [abcTxt, expr, cancelBuild]);
 
+  /* ── Switch to ABC mode: flush current expr context ── */
+  const switchToAbc = useCallback(() => {
+    setMode("abc");
+  }, []);
+
+  /* ── Switch to math mode: flush abcTxt into expr as txt token ── */
+  const switchToMath = useCallback(() => {
+    setAbcTxt((txt) => {
+      if (txt) {
+        setExpr((prev) => [...prev, { type: "txt", v: txt }]);
+      }
+      return "";
+    });
+    setMode("math");
+  }, []);
+
   const executeAction = useCallback((btn) => {
     if (!btn) return;
     switch (btn.act) {
@@ -335,11 +392,11 @@ function useMathExpression() {
       case "frac":    push({ type: "fr", n: btn.n, d: btn.d }); break;
       case "startFr": startFr(); break;
       case "startMx": startMx(); break;
-      case "abc":     setMode("abc"); break;
+      case "abc":     switchToAbc(); break;
       default: break;
     }
     return null;
-  }, [num, op, push, quickExp2, startEx, back, clear, startFr, startMx]);
+  }, [num, op, push, quickExp2, startEx, back, clear, startFr, startMx, switchToAbc]);
 
   return {
     expr, abcTxt, mode, building,
@@ -348,7 +405,7 @@ function useMathExpression() {
     startFr, startMx, fracNext,
     startEx, quickExp2, confirmEx,
     cancelBuild, commitLine, executeAction,
-    setMode, setAbcTxt,
+    setMode, setAbcTxt, switchToMath, switchToAbc,
   };
 }
 
@@ -708,7 +765,7 @@ function MathKeyboard({ onCommit, height, style, containerWidth, onExprChange })
             <div key={ri} style={{ display: "flex", gap: 3, justifyContent: "center", flex: 1 }}>
               {row.split("").map((ch) => (
                 <button key={ch} className="abc-key" onClick={() => engine.setAbcTxt((p) => p + ch)} style={{
-                  flex: 1, maxWidth: w < 400 ? 32 : 42,
+                  flex: 1,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: BORDER_RADIUS, border: "none", cursor: "pointer",
                   fontFamily: "inherit", fontWeight: 400,
@@ -721,7 +778,7 @@ function MathKeyboard({ onCommit, height, style, containerWidth, onExprChange })
           ))}
           <div style={{ display: "flex", gap: GAP, flex: 1 }}>
             {[
-              { l: "123", cls: "abc-tool", a: () => engine.setMode("math"), w: w < 400 ? 44 : 56, bg: COLORS.TOOL.bg, fg: "#334155", fs: 13, fw: 700 },
+              { l: "123", cls: "abc-tool", a: () => engine.switchToMath(), w: w < 400 ? 44 : 56, bg: COLORS.TOOL.bg, fg: "#334155", fs: 13, fw: 700 },
               { l: "space", cls: "abc-key", a: () => engine.setAbcTxt((p) => p + " "), flex: 1, bg: "#FFF", fg: "#334155", fs: 14 },
               { l: "=", cls: "abc-tool", a: () => engine.setAbcTxt((p) => p + "="), w: w < 400 ? 30 : 38, bg: COLORS.TOOL.bg, fg: "#334155", fs: 17 },
               { l: "\u232B", cls: "abc-tool", a: engine.back, w: w < 400 ? 44 : 56, bg: COLORS.TOOL.bg, fg: "#334155", fs: 18 },

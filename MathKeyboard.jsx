@@ -193,7 +193,7 @@ export function MathKeyboard({ onCommit, height, style }) {
             <div key={ri} style={{ display: "flex", gap: 3, justifyContent: "center", flex: 1 }}>
               {row.split("").map((ch) => (
                 <button key={ch} onClick={() => engine.setAbcTxt((p) => p + ch)} style={{
-                  flex: 1, maxWidth: containerWidth < 400 ? 32 : 42,
+                  flex: 1,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: BORDER_RADIUS, border: "none", cursor: "pointer",
                   fontFamily: "inherit", fontWeight: 400, fontSize: Math.round(17 * scale),
@@ -205,7 +205,7 @@ export function MathKeyboard({ onCommit, height, style }) {
           ))}
           <div style={{ display: "flex", gap: GAP, flex: 1 }}>
             {[
-              { l: "123", a: () => engine.setMode("math"), w: containerWidth < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 14, fw: 700 },
+              { l: "123", a: () => engine.switchToMath(), w: containerWidth < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 14, fw: 700 },
               { l: "space", a: () => engine.setAbcTxt((p) => p + " "), flex: 1, bg: "#FFF", fs: 14 },
               { l: "=", a: () => engine.setAbcTxt((p) => p + "="), w: containerWidth < 400 ? 32 : 42, bg: COLORS.TOOL.bg, fs: 17 },
               { l: "⌫", a: engine.back, w: containerWidth < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 18 },
