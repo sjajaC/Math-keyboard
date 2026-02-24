@@ -183,42 +183,112 @@ export function MathKeyboard({ onCommit, height, style }) {
           })}
         </div>
       ) : (
-        /* ABC keyboard */
+        /* ABC keyboard — staggered like real iOS/Android */
         <div style={{
-          display: "flex", flexDirection: "column", gap: GAP,
-          height: resolvedHeight, padding: compactPadding, background: COLORS.KB_BG,
+          display: "flex", flexDirection: "column", gap: containerWidth < 400 ? 5 : 6,
+          height: resolvedHeight, padding: containerWidth < 360 ? "6px 3px 4px" : "8px 4px 5px",
+          background: COLORS.KB_BG,
           justifyContent: "center", boxSizing: "border-box",
         }}>
-          {["qwertyuiop", "asdfghjkl", "zxcvbnm"].map((row, ri) => (
-            <div key={ri} style={{ display: "flex", gap: 3, justifyContent: "center", flex: 1 }}>
-              {row.split("").map((ch) => (
-                <button key={ch} onClick={() => engine.setAbcTxt((p) => p + ch)} style={{
-                  flex: 1,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  borderRadius: BORDER_RADIUS, border: "none", cursor: "pointer",
-                  fontFamily: "inherit", fontWeight: 400, fontSize: Math.round(17 * scale),
-                  color: "#1E293B", background: "#FFF",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-                }}>{ch}</button>
-              ))}
-            </div>
-          ))}
-          <div style={{ display: "flex", gap: GAP, flex: 1 }}>
-            {[
-              { l: "123", a: () => engine.switchToMath(), w: containerWidth < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 14, fw: 700 },
-              { l: "space", a: () => engine.setAbcTxt((p) => p + " "), flex: 1, bg: "#FFF", fs: 14 },
-              { l: "=", a: () => engine.setAbcTxt((p) => p + "="), w: containerWidth < 400 ? 32 : 42, bg: COLORS.TOOL.bg, fs: 17 },
-              { l: "⌫", a: engine.back, w: containerWidth < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 18 },
-            ].map((k, i) => (
-              <button key={i} onClick={k.a} style={{
-                width: k.w, flex: k.flex,
+          {/* Row 1: qwertyuiop — full width, 10 keys */}
+          <div style={{ display: "flex", gap: containerWidth < 400 ? 4 : 5, flex: 1, padding: "0 1px" }}>
+            {"qwertyuiop".split("").map((ch) => (
+              <button key={ch} onClick={() => engine.addText(ch)} style={{
+                flex: 1,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: BORDER_RADIUS, border: "none", cursor: "pointer",
-                fontFamily: "inherit", fontWeight: k.fw || 500, fontSize: Math.round((k.fs || 17) * scale),
-                color: "#334155", background: k.bg,
-                boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-              }}>{k.l}</button>
+                borderRadius: 6, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontWeight: 500,
+                fontSize: Math.round((containerWidth < 400 ? 15 : 17) * scale),
+                color: "#1E293B", background: "#FFF",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              }}>{ch}</button>
             ))}
+          </div>
+
+          {/* Row 2: asdfghjkl — 9 keys, centered */}
+          <div style={{ display: "flex", gap: containerWidth < 400 ? 4 : 5, flex: 1, padding: "0 5%" }}>
+            {"asdfghjkl".split("").map((ch) => (
+              <button key={ch} onClick={() => engine.addText(ch)} style={{
+                flex: 1,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: 6, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontWeight: 500,
+                fontSize: Math.round((containerWidth < 400 ? 15 : 17) * scale),
+                color: "#1E293B", background: "#FFF",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              }}>{ch}</button>
+            ))}
+          </div>
+
+          {/* Row 3: zxcvbnm — 7 keys with backspace */}
+          <div style={{ display: "flex", gap: containerWidth < 400 ? 4 : 5, flex: 1, padding: "0 1px" }}>
+            <div style={{ flex: 1.4 }} />
+            {"zxcvbnm".split("").map((ch) => (
+              <button key={ch} onClick={() => engine.addText(ch)} style={{
+                flex: 1,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: 6, border: "none", cursor: "pointer",
+                fontFamily: "inherit", fontWeight: 500,
+                fontSize: Math.round((containerWidth < 400 ? 15 : 17) * scale),
+                color: "#1E293B", background: "#FFF",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              }}>{ch}</button>
+            ))}
+            <button onClick={engine.back} style={{
+              flex: 1.4,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: 6, border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontWeight: 600,
+              fontSize: Math.round(17 * scale),
+              color: "#334155", background: COLORS.TOOL.bg,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            }}>⌫</button>
+          </div>
+
+          {/* Row 4: bottom — 123, space, =, enter */}
+          <div style={{ display: "flex", gap: containerWidth < 400 ? 4 : 5, flex: 1, padding: "0 1px" }}>
+            <button onClick={() => engine.switchToMath()} style={{
+              flex: containerWidth < 400 ? 1.5 : 1.8,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: 6, border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontWeight: 700,
+              fontSize: Math.round(13 * scale),
+              color: "#334155", background: COLORS.TOOL.bg,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            }}>123</button>
+            <button onClick={() => engine.addText(" ")} style={{
+              flex: 5,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: 6, border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontWeight: 400,
+              fontSize: Math.round(14 * scale),
+              color: "#64748B", background: "#FFF",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            }}>space</button>
+            <button onClick={() => engine.addText("=")} style={{
+              flex: 1,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: 6, border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontWeight: 500,
+              fontSize: Math.round(17 * scale),
+              color: "#334155", background: COLORS.TOOL.bg,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            }}>=</button>
+            <button onClick={() => {
+                const result = engine.executeAction({ act: "enter" });
+                if (result === "commit" && onCommit) {
+                  const tokens = engine.commitLine();
+                  if (tokens) onCommit(tokens);
+                }
+              }} style={{
+              flex: containerWidth < 400 ? 1.5 : 1.8,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              borderRadius: 6, border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontWeight: 700,
+              fontSize: Math.round(16 * scale),
+              color: "#FFF", background: COLORS.ARITH.bg,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            }}>↵</button>
           </div>
         </div>
       )}

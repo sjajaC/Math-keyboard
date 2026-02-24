@@ -16,7 +16,6 @@ import { useState, useCallback } from "react";
  */
 export function useMathExpression() {
   const [expr, setExpr] = useState([]);
-  const [abcTxt, setAbcTxt] = useState("");
   const [mode, setMode] = useState("math"); // "math" | "abc"
 
   // Fraction builder
@@ -34,6 +33,15 @@ export function useMathExpression() {
 
   const push = useCallback((item) => {
     setExpr((p) => [...p, item]);
+  }, []);
+
+  /* ── Add text character (ABC mode) - merges consecutive txt tokens ── */
+  const addText = useCallback((ch) => {
+    setExpr((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.type === "txt") return [...prev.slice(0, -1), { type: "txt", v: last.v + ch }];
+      return [...prev, { type: "txt", v: ch }];
+    });
   }, []);
 
   /* ── Number input ── */
@@ -154,7 +162,17 @@ export function useMathExpression() {
 
   /* ── Backspace ── */
   const back = useCallback(() => {
-    if (mode === "abc") { setAbcTxt((p) => p.slice(0, -1)); return; }
+    if (mode === "abc") {
+      /* Backspace in ABC mode: remove last char from last txt token */
+      setExpr((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.type === "txt" && last.v.length > 1)
+          return [...prev.slice(0, -1), { type: "txt", v: last.v.slice(0, -1) }];
+        if (last?.type === "txt") return prev.slice(0, -1);
+        return prev;
+      });
+      return;
+    }
     if (fStep === "den" && fBuf.d) { setFBuf((p) => ({ ...p, d: p.d.slice(0, -1) })); return; }
     if (fStep === "den") { setFStep("num"); return; }
     if (fStep === "num" && fBuf.n) { setFBuf((p) => ({ ...p, n: p.n.slice(0, -1) })); return; }
@@ -174,33 +192,20 @@ export function useMathExpression() {
 
   /* ── Clear all ── */
   const clear = useCallback(() => {
-    setExpr([]); setAbcTxt(""); cancelBuild();
+    setExpr([]); cancelBuild();
   }, [cancelBuild]);
 
   /* ── Commit current line ── */
   const commitLine = useCallback(() => {
-    const tokens = [];
-    if (abcTxt) tokens.push({ type: "txt", v: abcTxt });
-    tokens.push(...expr);
-    if (tokens.length === 0) return null;
-    setExpr([]); setAbcTxt(""); cancelBuild();
+    if (expr.length === 0) return null;
+    const tokens = [...expr];
+    setExpr([]); cancelBuild();
     return tokens;
-  }, [abcTxt, expr, cancelBuild]);
+  }, [expr, cancelBuild]);
 
-  /* ── Mode switching with token flush ── */
-  const switchToAbc = useCallback(() => {
-    setMode("abc");
-  }, []);
-
-  const switchToMath = useCallback(() => {
-    setAbcTxt((txt) => {
-      if (txt) {
-        setExpr((prev) => [...prev, { type: "txt", v: txt }]);
-      }
-      return "";
-    });
-    setMode("math");
-  }, []);
+  /* ── Mode switching ── */
+  const switchToAbc = useCallback(() => { setMode("abc"); }, []);
+  const switchToMath = useCallback(() => { setMode("math"); }, []);
 
   /* ── Execute a button action ── */
   const executeAction = useCallback((btn) => {
@@ -225,18 +230,18 @@ export function useMathExpression() {
 
   return {
     // State
-    expr, abcTxt, mode, building,
+    expr, mode, building,
     fStep, fBuf, mxW, mxOn,
     exOn, exB, exP,
 
     // Actions
-    num, op, push, back, clear,
+    num, op, push, addText, back, clear,
     startFr, startMx, fracNext,
     startEx, quickExp2, confirmEx,
     cancelBuild, commitLine, executeAction,
     switchToAbc, switchToMath,
 
     // Setters
-    setMode, setAbcTxt,
+    setMode,
   };
 }
