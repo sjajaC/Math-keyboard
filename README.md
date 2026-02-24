@@ -2,6 +2,8 @@
 
 Draggable math keyboard for education apps — **React** & **React Native**
 
+[**Live Demo**](https://sjajac.github.io/Math-keyboard/demo/index.html)
+
 ![7×5 Grid Layout](https://img.shields.io/badge/layout-7%C3%975_grid-6366F1)
 ![Fractions](https://img.shields.io/badge/feature-fractions-A16207)
 ![Responsive](https://img.shields.io/badge/feature-responsive-22C55E)
@@ -36,12 +38,6 @@ abc   xⁿ  x²  │  %    0    .   │  =
    a  s  d  f  g  h  j  k  l
       z  x  c  v  b  n  m  ⌫
   123      space        =   ↵
-```
-
-## Install
-
-```bash
-npm install @mathpad/keyboard
 ```
 
 ## Usage — React (Web)
