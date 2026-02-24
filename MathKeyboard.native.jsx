@@ -1,24 +1,44 @@
 import React, { useState, useRef, useCallback } from "react";
 import {
   View, Text, TouchableOpacity, PanResponder, Animated,
-  StyleSheet, Dimensions,
+  StyleSheet, Dimensions, useWindowDimensions,
 } from "react-native";
 import { COLORS, COLS, ROWS, GAP, KB_HEIGHT, BORDER_RADIUS, createDefaultButtons } from "../core/buttons.js";
 import { useMathExpression } from "../core/useExpression.js";
+
+/**
+ * Compute responsive scale factor from container/screen width.
+ */
+function getResponsiveScale(width) {
+  if (width < 320) return 0.7;
+  if (width < 400) return 0.85;
+  if (width < 600) return 1;
+  return 1.1;
+}
+
+/**
+ * Compute responsive keyboard height when no explicit height is provided.
+ */
+function getResponsiveHeight(width) {
+  if (width < 360) return 220;
+  if (width < 500) return 260;
+  if (width < 768) return 280;
+  return 300;
+}
 
 /**
  * MathKeyboard for React Native
  *
  * Props:
  *   onCommit(tokens)  — called when user presses Enter
- *   height            — keyboard height (default 280)
+ *   height            — keyboard height (default: auto-scaled by screen width)
  *   style             — extra container style
  *   editLabel         — edit button text (default "⚙ Düzenle")
  *   doneLabel         — done button text (default "✓ Bitti")
  */
 export function MathKeyboard({
   onCommit,
-  height = KB_HEIGHT,
+  height,
   style,
   editLabel = "⚙ Düzenle",
   doneLabel = "✓ Bitti",
@@ -32,6 +52,11 @@ export function MathKeyboard({
   const pan = useRef(new Animated.ValueXY()).current;
 
   const engine = useMathExpression();
+
+  /* ── Responsive dimensions ── */
+  const { width: screenWidth } = useWindowDimensions();
+  const scale = getResponsiveScale(screenWidth);
+  const resolvedHeight = height || getResponsiveHeight(screenWidth);
 
   const handleAction = useCallback((btn) => {
     if (editMode) return;
@@ -110,26 +135,26 @@ export function MathKeyboard({
     if (btn.isFrac) {
       return (
         <View style={{ alignItems: "center" }}>
-          <Text style={{ fontSize: 9, fontWeight: "600", color: btn.fg }}>a</Text>
-          <View style={{ height: 1, width: 16, backgroundColor: btn.fg }} />
-          <Text style={{ fontSize: 9, fontWeight: "600", color: btn.fg }}>b</Text>
+          <Text style={{ fontSize: Math.round(9 * scale), fontWeight: "600", color: btn.fg }}>a</Text>
+          <View style={{ height: 1, width: Math.round(16 * scale), backgroundColor: btn.fg }} />
+          <Text style={{ fontSize: Math.round(9 * scale), fontWeight: "600", color: btn.fg }}>b</Text>
         </View>
       );
     }
     if (btn.isMx) {
       return (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 1 }}>
-          <Text style={{ fontSize: 12, fontWeight: "600", color: btn.fg }}>n</Text>
+          <Text style={{ fontSize: Math.round(12 * scale), fontWeight: "600", color: btn.fg }}>n</Text>
           <View style={{ alignItems: "center" }}>
-            <Text style={{ fontSize: 7, fontWeight: "600", color: btn.fg }}>a</Text>
-            <View style={{ height: 1, width: 10, backgroundColor: btn.fg }} />
-            <Text style={{ fontSize: 7, fontWeight: "600", color: btn.fg }}>b</Text>
+            <Text style={{ fontSize: Math.round(7 * scale), fontWeight: "600", color: btn.fg }}>a</Text>
+            <View style={{ height: 1, width: Math.round(10 * scale), backgroundColor: btn.fg }} />
+            <Text style={{ fontSize: Math.round(7 * scale), fontWeight: "600", color: btn.fg }}>b</Text>
           </View>
         </View>
       );
     }
     return (
-      <Text style={{ fontSize: btn.fs, fontWeight: "600", color: btn.fg }}>
+      <Text style={{ fontSize: Math.round(btn.fs * scale), fontWeight: "600", color: btn.fg }}>
         {btn.label}
       </Text>
     );
@@ -138,7 +163,7 @@ export function MathKeyboard({
   const cellWidth = `${(100 - GAP * (COLS - 1) * 0.1) / COLS}%`;
 
   return (
-    <View style={[{ backgroundColor: COLORS.KB_BG, padding: 6, height }, style]}>
+    <View style={[{ backgroundColor: COLORS.KB_BG, padding: 6, height: resolvedHeight }, style]}>
 
       {/* Edit toggle */}
       <TouchableOpacity
@@ -148,7 +173,9 @@ export function MathKeyboard({
           { backgroundColor: editMode ? "#EF4444" : COLORS.ACCENT },
         ]}
       >
-        <Text style={styles.editBtnText}>{editMode ? doneLabel : editLabel}</Text>
+        <Text style={[styles.editBtnText, { fontSize: Math.round(11 * scale) }]}>
+          {editMode ? doneLabel : editLabel}
+        </Text>
       </TouchableOpacity>
 
       {/* Grid */}

@@ -16,7 +16,6 @@ import { useState, useCallback } from "react";
  */
 export function useMathExpression() {
   const [expr, setExpr] = useState([]);
-  const [abcTxt, setAbcTxt] = useState("");
   const [mode, setMode] = useState("math"); // "math" | "abc"
 
   // Fraction builder
@@ -36,6 +35,15 @@ export function useMathExpression() {
     setExpr((p) => [...p, item]);
   }, []);
 
+  /* ── Add text character (ABC mode) - merges consecutive txt tokens ── */
+  const addText = useCallback((ch) => {
+    setExpr((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.type === "txt") return [...prev.slice(0, -1), { type: "txt", v: last.v + ch }];
+      return [...prev, { type: "txt", v: ch }];
+    });
+  }, []);
+
   /* ── Number input ── */
   const num = useCallback((n) => {
     if (fStep === "num") return setFBuf((p) => ({ ...p, n: p.n + n }));
@@ -50,10 +58,49 @@ export function useMathExpression() {
     });
   }, [fStep, mxOn, exOn, exB]);
 
+  /* ── Operators that act as brackets/prefix and can follow other operators ── */
+  const BRACKET_OPS = new Set(["(", ")", "\u221A("]);
+
   /* ── Operator ── */
   const op = useCallback((o) => {
-    if (!building) push({ type: "o", v: o });
-  }, [building, push]);
+    if (building) return;
+    setExpr((prev) => {
+      const last = prev[prev.length - 1];
+
+      /* Allow brackets and √( freely */
+      if (BRACKET_OPS.has(o)) return [...prev, { type: "o", v: o }];
+
+      /* Allow "." if last token is a number without a dot already */
+      if (o === ".") {
+        if (last?.type === "n" && !last.v.includes(".")) {
+          return [...prev.slice(0, -1), { type: "n", v: last.v + "." }];
+        }
+        if (!last || last.type === "o") {
+          return [...prev, { type: "n", v: "0." }];
+        }
+        return prev;
+      }
+
+      /* First token: only allow unary minus */
+      if (prev.length === 0) {
+        if (o === "\u2212") return [{ type: "o", v: "\u2212" }];
+        return prev;
+      }
+
+      /* After opening bracket: allow unary minus */
+      if (last?.type === "o" && last.v === "(") {
+        if (o === "\u2212") return [...prev, { type: "o", v: "\u2212" }];
+        return prev;
+      }
+
+      /* Prevent consecutive operators: replace previous operator */
+      if (last?.type === "o" && !BRACKET_OPS.has(last.v)) {
+        return [...prev.slice(0, -1), { type: "o", v: o }];
+      }
+
+      return [...prev, { type: "o", v: o }];
+    });
+  }, [building]);
 
   /* ── Fraction builder ── */
   const startFr = useCallback(() => {
@@ -115,7 +162,17 @@ export function useMathExpression() {
 
   /* ── Backspace ── */
   const back = useCallback(() => {
-    if (mode === "abc") { setAbcTxt((p) => p.slice(0, -1)); return; }
+    if (mode === "abc") {
+      /* Backspace in ABC mode: remove last char from last txt token */
+      setExpr((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.type === "txt" && last.v.length > 1)
+          return [...prev.slice(0, -1), { type: "txt", v: last.v.slice(0, -1) }];
+        if (last?.type === "txt") return prev.slice(0, -1);
+        return prev;
+      });
+      return;
+    }
     if (fStep === "den" && fBuf.d) { setFBuf((p) => ({ ...p, d: p.d.slice(0, -1) })); return; }
     if (fStep === "den") { setFStep("num"); return; }
     if (fStep === "num" && fBuf.n) { setFBuf((p) => ({ ...p, n: p.n.slice(0, -1) })); return; }
@@ -135,18 +192,20 @@ export function useMathExpression() {
 
   /* ── Clear all ── */
   const clear = useCallback(() => {
-    setExpr([]); setAbcTxt(""); cancelBuild();
+    setExpr([]); cancelBuild();
   }, [cancelBuild]);
 
   /* ── Commit current line ── */
   const commitLine = useCallback(() => {
-    const tokens = [];
-    if (abcTxt) tokens.push({ type: "txt", v: abcTxt });
-    tokens.push(...expr);
-    if (tokens.length === 0) return null;
-    setExpr([]); setAbcTxt(""); cancelBuild();
+    if (expr.length === 0) return null;
+    const tokens = [...expr];
+    setExpr([]); cancelBuild();
     return tokens;
-  }, [abcTxt, expr, cancelBuild]);
+  }, [expr, cancelBuild]);
+
+  /* ── Mode switching ── */
+  const switchToAbc = useCallback(() => { setMode("abc"); }, []);
+  const switchToMath = useCallback(() => { setMode("math"); }, []);
 
   /* ── Execute a button action ── */
   const executeAction = useCallback((btn) => {
@@ -163,25 +222,26 @@ export function useMathExpression() {
       case "frac":    push({ type: "fr", n: btn.n, d: btn.d }); break;
       case "startFr": startFr(); break;
       case "startMx": startMx(); break;
-      case "abc":     setMode("abc"); break;
+      case "abc":     switchToAbc(); break;
       default: break;
     }
     return null;
-  }, [num, op, push, quickExp2, startEx, back, clear, startFr, startMx]);
+  }, [num, op, push, quickExp2, startEx, back, clear, startFr, startMx, switchToAbc]);
 
   return {
     // State
-    expr, abcTxt, mode, building,
+    expr, mode, building,
     fStep, fBuf, mxW, mxOn,
     exOn, exB, exP,
 
     // Actions
-    num, op, push, back, clear,
+    num, op, push, addText, back, clear,
     startFr, startMx, fracNext,
     startEx, quickExp2, confirmEx,
     cancelBuild, commitLine, executeAction,
+    switchToAbc, switchToMath,
 
     // Setters
-    setMode, setAbcTxt,
+    setMode,
   };
 }
