@@ -1,0 +1,26 @@
+{
+  "name": "@mathpad/keyboard",
+  "version": "1.0.0",
+  "description": "Draggable math keyboard with fractions, exponents & mixed numbers — React & React Native",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "react-native": "src/native/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./native": "./src/native/index.js",
+    "./core": "./src/core/index.js"
+  },
+  "files": ["src/"],
+  "keywords": [
+    "math", "keyboard", "react", "react-native",
+    "fraction", "exponent", "education", "draggable", "calculator"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=17.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native": { "optional": true }
+  }
+}
