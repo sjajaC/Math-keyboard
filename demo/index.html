@@ -497,7 +497,7 @@ const CSS_ANIMATIONS = `
 @keyframes mathkb-jiggle{0%{transform:rotate(-1.5deg)}100%{transform:rotate(1.5deg)}}
 `;
 
-function MathKeyboard({ onCommit, height, style, containerWidth }) {
+function MathKeyboard({ onCommit, height, style, containerWidth, onExprChange }) {
   const [buttons, setButtons] = useState(createDefaultButtons);
   const gridRef = useRef(null);
   const engine = useMathExpression();
@@ -507,6 +507,27 @@ function MathKeyboard({ onCommit, height, style, containerWidth }) {
   const w = containerWidth || 375;
   const responsiveHeight = height || (w < 360 ? 220 : w < 500 ? 260 : w < 768 ? 280 : 300);
   const fontScale = w < 320 ? 0.7 : w < 400 ? 0.85 : w < 600 ? 1 : 1.1;
+
+  /* ── Notify parent of live expression changes ── */
+  useEffect(() => {
+    if (onExprChange) {
+      onExprChange({
+        expr: engine.expr,
+        abcTxt: engine.abcTxt,
+        mode: engine.mode,
+        building: engine.building,
+        fStep: engine.fStep,
+        fBuf: engine.fBuf,
+        mxOn: engine.mxOn,
+        mxW: engine.mxW,
+        exOn: engine.exOn,
+        exB: engine.exB,
+        exP: engine.exP,
+      });
+    }
+  }, [engine.expr, engine.abcTxt, engine.mode, engine.building,
+      engine.fStep, engine.fBuf, engine.mxOn, engine.mxW,
+      engine.exOn, engine.exB, engine.exP, onExprChange]);
 
   const handleAction = useCallback((btn) => {
     if (drag.editMode) return;
@@ -699,10 +720,84 @@ const DEVICES = [
   { id: "full",    label: "Tam",      icon: "\u2922",  w: null, desc: "Tam genislik" },
 ];
 
+function LiveExpressionPreview({ exprState, fontSize = 18 }) {
+  if (!exprState) return null;
+  const { expr, abcTxt, mode, building, fStep, fBuf, mxOn, mxW, exOn, exB, exP } = exprState;
+
+  const hasContent = expr.length > 0 || abcTxt || building;
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", flexWrap: "wrap", gap: 2,
+      padding: "8px 12px", fontSize, minHeight: 40,
+    }}>
+      {/* ABC text */}
+      {abcTxt && (
+        <span style={{ color: "#475569", fontStyle: "italic", fontWeight: 600 }}>{abcTxt}</span>
+      )}
+
+      {/* Existing tokens */}
+      {expr.map((t, i) => <ExpressionToken key={i} token={t} />)}
+
+      {/* Fraction/mixed builder preview */}
+      {(mxOn || fStep) && (
+        <span style={{
+          display: "inline-flex", alignItems: "center", gap: 3,
+          padding: "2px 6px", borderRadius: 4,
+          background: "#FEF9C3", border: "1px dashed #F59E0B",
+          fontSize: fontSize * 0.85, fontWeight: 600, color: "#A16207",
+        }}>
+          {mxOn && <span>{mxW || "?"}</span>}
+          {fStep && (
+            <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", lineHeight: 1 }}>
+              <span style={{ borderBottom: "1.5px solid #A16207", padding: "0 3px", minWidth: 14, textAlign: "center" }}>
+                {fBuf.n || "?"}
+              </span>
+              <span style={{ padding: "0 3px", minWidth: 14, textAlign: "center" }}>
+                {fStep === "den" ? (fBuf.d || "?") : "?"}
+              </span>
+            </span>
+          )}
+        </span>
+      )}
+
+      {/* Exponent builder preview */}
+      {exOn && (
+        <span style={{
+          display: "inline-flex", alignItems: "baseline", gap: 1,
+          padding: "2px 6px", borderRadius: 4,
+          background: "#EEF2FF", border: "1px dashed #818CF8",
+          fontSize: fontSize * 0.85, fontWeight: 600, color: "#6366F1",
+        }}>
+          {exB || "?"}<sup style={{ fontSize: "0.7em" }}>{exP || "?"}</sup>
+        </span>
+      )}
+
+      {/* Blinking cursor */}
+      {hasContent && (
+        <span style={{
+          width: 2, height: fontSize * 1.2,
+          background: "#6366F1",
+          animation: "mathkb-blink 1s step-end infinite",
+          marginLeft: 1,
+        }} />
+      )}
+
+      {/* Placeholder */}
+      {!hasContent && (
+        <span style={{ color: "#CBD5E1", fontStyle: "italic", fontSize: fontSize * 0.75 }}>
+          Yazmaya baslayin...
+        </span>
+      )}
+    </div>
+  );
+}
+
 function DemoApp() {
   const [device, setDevice] = useState("phone");
   const [lines, setLines] = useState([]);
   const [containerW, setContainerW] = useState(375);
+  const [liveExpr, setLiveExpr] = useState(null);
   const contentRef = useRef(null);
 
   const currentDevice = DEVICES.find((d) => d.id === device);
@@ -721,6 +816,10 @@ function DemoApp() {
 
   const handleCommit = useCallback((tokens) => {
     setLines((prev) => [...prev, tokens]);
+  }, []);
+
+  const handleExprChange = useCallback((state) => {
+    setLiveExpr(state);
   }, []);
 
   const clearLines = useCallback(() => setLines([]), []);
@@ -784,19 +883,39 @@ function DemoApp() {
               </div>
             </div>
 
-            {/* Expression display area */}
+            {/* LIVE expression preview */}
+            <div style={{
+              padding: "4px 12px",
+              minHeight: 48,
+              background: "#FFF",
+              borderBottom: "2px solid #6366F1",
+            }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700, color: "#6366F1",
+                textTransform: "uppercase", letterSpacing: 0.5,
+                padding: "4px 0 0",
+              }}>
+                {liveExpr?.mode === "abc" ? "Metin Girisi" : "Canli Onizleme"}
+              </div>
+              <LiveExpressionPreview
+                exprState={liveExpr}
+                fontSize={containerW < 400 ? 16 : 20}
+              />
+            </div>
+
+            {/* Committed expression history */}
             <div style={{
               padding: "8px 12px",
-              minHeight: 80,
-              background: "#FFF",
+              minHeight: 40,
+              background: "#FAFBFC",
               borderBottom: "1px solid #E2E8F0",
             }}>
               {lines.length === 0 ? (
                 <div style={{
-                  color: "#94A3B8", fontSize: 13, fontStyle: "italic",
-                  padding: "12px 0", textAlign: "center",
+                  color: "#94A3B8", fontSize: 12, fontStyle: "italic",
+                  padding: "8px 0", textAlign: "center",
                 }}>
-                  Butonlara basarak ifade olusturun, sonra Enter'a basin...
+                  Ifade yazin ve Enter'a basin
                 </div>
               ) : (
                 <>
@@ -833,6 +952,7 @@ function DemoApp() {
             }}>
               <MathKeyboard
                 onCommit={handleCommit}
+                onExprChange={handleExprChange}
                 containerWidth={containerW}
               />
             </div>
