@@ -15,7 +15,6 @@ Math keyboard for education apps — **React** & **React Native**
 - 🎨 **Clean color palette** — 5 color groups (Tailwind-based)
 - 📱 **Cross-platform** — React DOM + React Native
 - 📏 **Responsive** — auto-scales height, font sizes and layout based on container width
-- ✅ **Operator validation** — prevents consecutive operators, smart unary minus support
 
 ## Layout
 
