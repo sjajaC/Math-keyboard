@@ -85,6 +85,58 @@
     backdrop-filter: blur(8px);
   }
 
+  /* ── Keyboard button effects ── */
+  .kb-btn {
+    transition: transform 0.1s, box-shadow 0.15s, opacity 0.1s, filter 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .kb-btn:hover {
+    filter: brightness(0.93);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.13) !important;
+  }
+  .kb-btn:active {
+    transform: scale(0.92) !important;
+    filter: brightness(0.85);
+    box-shadow: 0 0 0 rgba(0,0,0,0) !important;
+  }
+  .kb-btn-arith:hover {
+    filter: brightness(1.15);
+  }
+  .kb-btn-arith:active {
+    filter: brightness(0.9);
+    transform: scale(0.92) !important;
+  }
+
+  /* ABC keyboard letter keys */
+  .abc-key {
+    transition: transform 0.08s, background 0.1s, box-shadow 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .abc-key:hover {
+    background: #EEF2FF !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+  }
+  .abc-key:active {
+    transform: scale(0.9);
+    background: #C7D2FE !important;
+    box-shadow: none !important;
+  }
+
+  /* ABC bottom row tool keys */
+  .abc-tool {
+    transition: transform 0.08s, filter 0.1s, box-shadow 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .abc-tool:hover {
+    filter: brightness(0.92);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+  }
+  .abc-tool:active {
+    transform: scale(0.92);
+    filter: brightness(0.82);
+  }
+
   @media (max-width: 480px) {
     .toolbar { padding: 8px 12px; }
     .toolbar-title { font-size: 14px; }
@@ -615,8 +667,10 @@ function MathKeyboard({ onCommit, height, style, containerWidth, onExprChange })
           {buttons.map((btn, idx) => {
             const isDragging = drag.dragIdx === idx;
             const isTarget = drag.hoverIdx === idx && drag.dragIdx !== null && drag.dragIdx !== idx;
+            const isArith = btn.bg === COLORS.ARITH.bg;
             return (
               <div key={idx}
+                className={`kb-btn${isArith ? " kb-btn-arith" : ""}`}
                 onPointerDown={(e) => drag.editMode ? onPointerDown(e, idx) : null}
                 onTouchStart={(e) => drag.editMode ? onPointerDown(e, idx) : null}
                 onClick={() => handleAction(btn)}
@@ -633,10 +687,7 @@ function MathKeyboard({ onCommit, height, style, containerWidth, onExprChange })
                     : "0 1px 2px rgba(0,0,0,0.06)",
                   opacity: isDragging ? 0.35 : 1,
                   transform: isTarget ? "scale(1.06)" : "none",
-                  transition: "transform 0.15s, box-shadow 0.15s, opacity 0.1s",
                   animation: drag.editMode ? "mathkb-jiggle 0.3s infinite alternate" : "none",
-                  WebkitTapHighlightColor: "transparent",
-                  userSelect: "none",
                 }}
               >
                 {renderLabel(btn)}
@@ -656,7 +707,7 @@ function MathKeyboard({ onCommit, height, style, containerWidth, onExprChange })
           {["qwertyuiop", "asdfghjkl", "zxcvbnm"].map((row, ri) => (
             <div key={ri} style={{ display: "flex", gap: 3, justifyContent: "center", flex: 1 }}>
               {row.split("").map((ch) => (
-                <button key={ch} onClick={() => engine.setAbcTxt((p) => p + ch)} style={{
+                <button key={ch} className="abc-key" onClick={() => engine.setAbcTxt((p) => p + ch)} style={{
                   flex: 1, maxWidth: w < 400 ? 32 : 42,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: BORDER_RADIUS, border: "none", cursor: "pointer",
@@ -670,18 +721,25 @@ function MathKeyboard({ onCommit, height, style, containerWidth, onExprChange })
           ))}
           <div style={{ display: "flex", gap: GAP, flex: 1 }}>
             {[
-              { l: "123", a: () => engine.setMode("math"), w: w < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 14, fw: 700 },
-              { l: "space", a: () => engine.setAbcTxt((p) => p + " "), flex: 1, bg: "#FFF", fs: 14 },
-              { l: "=", a: () => engine.setAbcTxt((p) => p + "="), w: w < 400 ? 32 : 42, bg: COLORS.TOOL.bg, fs: 17 },
-              { l: "\u232B", a: engine.back, w: w < 400 ? 48 : 62, bg: COLORS.TOOL.bg, fs: 18 },
+              { l: "123", cls: "abc-tool", a: () => engine.setMode("math"), w: w < 400 ? 44 : 56, bg: COLORS.TOOL.bg, fg: "#334155", fs: 13, fw: 700 },
+              { l: "space", cls: "abc-key", a: () => engine.setAbcTxt((p) => p + " "), flex: 1, bg: "#FFF", fg: "#334155", fs: 14 },
+              { l: "=", cls: "abc-tool", a: () => engine.setAbcTxt((p) => p + "="), w: w < 400 ? 30 : 38, bg: COLORS.TOOL.bg, fg: "#334155", fs: 17 },
+              { l: "\u232B", cls: "abc-tool", a: engine.back, w: w < 400 ? 44 : 56, bg: COLORS.TOOL.bg, fg: "#334155", fs: 18 },
+              { l: "\u21B5", cls: "kb-btn kb-btn-arith", a: () => {
+                  const result = engine.executeAction({ act: "enter" });
+                  if (result === "commit" && onCommit) {
+                    const tokens = engine.commitLine();
+                    if (tokens) onCommit(tokens);
+                  }
+                }, w: w < 400 ? 44 : 56, bg: COLORS.ARITH.bg, fg: "#FFF", fs: 16, fw: 700 },
             ].map((k, i) => (
-              <button key={i} onClick={k.a} style={{
+              <button key={i} className={k.cls} onClick={k.a} style={{
                 width: k.w, flex: k.flex,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: BORDER_RADIUS, border: "none", cursor: "pointer",
                 fontFamily: "inherit", fontWeight: k.fw || 500,
                 fontSize: Math.round((k.fs || 17) * fontScale),
-                color: "#334155", background: k.bg,
+                color: k.fg, background: k.bg,
                 boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
               }}>{k.l}</button>
             ))}
