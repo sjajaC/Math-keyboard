@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="480" viewBox="0 0 520 480">
+  <defs>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 700; fill: #0F172A; }
+      .label { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 600; fill: #334155; }
+      .hex { font-family: 'SF Mono', 'Fira Code', monospace; font-weight: 500; fill: #64748B; }
+      .section { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight: 700; fill: #475569; }
+    </style>
+  </defs>
+
+  <!-- Header -->
+  <text x="20" y="30" class="title" font-size="18">@mathpad/keyboard — Design Tokens</text>
+  <line x1="20" y1="38" x2="500" y2="38" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- === COLOR PALETTE === -->
+  <text x="20" y="65" class="section" font-size="13">COLOR PALETTE</text>
+
+  <!-- Numbers -->
+  <rect x="20" y="78" width="44" height="44" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="72" y="95" class="label" font-size="12">Numbers</text>
+  <text x="72" y="112" class="hex" font-size="10">bg: #FFFFFF  fg: #1E293B</text>
+
+  <!-- Functions -->
+  <rect x="20" y="130" width="44" height="44" rx="8" fill="#F1F5F9"/>
+  <text x="72" y="147" class="label" font-size="12">Functions</text>
+  <text x="72" y="164" class="hex" font-size="10">bg: #F1F5F9  fg: #475569</text>
+
+  <!-- Fractions -->
+  <rect x="20" y="182" width="44" height="44" rx="8" fill="#FEF9C3"/>
+  <text x="72" y="199" class="label" font-size="12">Fractions</text>
+  <text x="72" y="216" class="hex" font-size="10">bg: #FEF9C3  fg: #A16207</text>
+
+  <!-- Tools -->
+  <rect x="20" y="234" width="44" height="44" rx="8" fill="#CBD5E1"/>
+  <text x="72" y="251" class="label" font-size="12">Tools</text>
+  <text x="72" y="268" class="hex" font-size="10">bg: #CBD5E1  fg: #334155</text>
+
+  <!-- Arithmetic -->
+  <rect x="20" y="286" width="44" height="44" rx="8" fill="#6366F1"/>
+  <text x="72" y="303" class="label" font-size="12">Arithmetic</text>
+  <text x="72" y="320" class="hex" font-size="10">bg: #6366F1  fg: #FFFFFF</text>
+
+  <!-- Background -->
+  <rect x="20" y="338" width="44" height="44" rx="8" fill="#E2E8F0"/>
+  <text x="72" y="355" class="label" font-size="12">Keyboard BG</text>
+  <text x="72" y="372" class="hex" font-size="10">bg: #E2E8F0</text>
+
+  <!-- Accent -->
+  <rect x="20" y="390" width="44" height="44" rx="8" fill="#EEF2FF" stroke="#6366F1" stroke-width="1.5"/>
+  <text x="72" y="407" class="label" font-size="12">Accent Light</text>
+  <text x="72" y="424" class="hex" font-size="10">bg: #EEF2FF  accent: #6366F1</text>
+
+  <!-- === RIGHT COLUMN: SPACING & TYPOGRAPHY === -->
+  <text x="280" y="65" class="section" font-size="13">DIMENSIONS</text>
+
+  <!-- Grid info -->
+  <text x="280" y="88" class="label" font-size="11">Grid</text>
+  <text x="280" y="104" class="hex" font-size="10">7 cols × 5 rows</text>
+
+  <text x="280" y="128" class="label" font-size="11">Button Size</text>
+  <text x="280" y="144" class="hex" font-size="10">~52 × 58 px (flexible)</text>
+
+  <text x="280" y="168" class="label" font-size="11">Gap</text>
+  <text x="280" y="184" class="hex" font-size="10">4px</text>
+
+  <text x="280" y="208" class="label" font-size="11">Border Radius</text>
+  <text x="280" y="224" class="hex" font-size="10">8px (buttons)  6px (ABC keys)</text>
+
+  <text x="280" y="248" class="label" font-size="11">Box Shadow</text>
+  <text x="280" y="264" class="hex" font-size="10">0 1px 2px rgba(0,0,0,0.06)</text>
+
+  <!-- Responsive -->
+  <text x="280" y="300" class="section" font-size="13">RESPONSIVE BREAKPOINTS</text>
+
+  <text x="280" y="323" class="hex" font-size="10">&lt; 320px  → h:220  scale: 0.70×</text>
+  <text x="280" y="339" class="hex" font-size="10">320–399  → h:260  scale: 0.85×</text>
+  <text x="280" y="355" class="hex" font-size="10">400–599  → h:280  scale: 1.00×</text>
+  <text x="280" y="371" class="hex" font-size="10">≥ 600px  → h:300  scale: 1.10×</text>
+
+  <!-- Typography -->
+  <text x="280" y="407" class="section" font-size="13">TYPOGRAPHY</text>
+
+  <text x="280" y="430" class="hex" font-size="10">Numbers:    22px  weight: 600</text>
+  <text x="280" y="446" class="hex" font-size="10">Operators:  22–24px  weight: 600</text>
+  <text x="280" y="462" class="hex" font-size="10">Functions:  15–20px  weight: 600</text>
+  <text x="280" y="478" class="hex" font-size="10">Tools:      13–17px  weight: 700</text>
+</svg>
