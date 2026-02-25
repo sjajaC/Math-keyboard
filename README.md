@@ -21,11 +21,11 @@ Math keyboard for education apps — **React** & **React Native**
 ### Math Keyboard (7×5 grid)
 
 ```
- √    (    )   │ AC   ⌫    ↵   │  ÷
+ √    (    )   │  AC   ⌫    ↵   │  ÷
  π    <    >   │  7    8    9   │  ×
  ½    ¼    ¾   │  4    5    6   │  −
-a/b  n·   ⅓   │  1    2    3   │  +
-abc   xⁿ  x²  │  %    0    .   │  =
+a/b   n·   ⅓   │  1    2    3   │  +
+abc   xⁿ  x²   │  %    0    .   │  =
 ```
 
 ### ABC Keyboard (staggered)
